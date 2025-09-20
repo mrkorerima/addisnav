@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Addis Bus Navigator — Mobile</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#2c3e50" />
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    :root{
+      --brand:#2c3e50;
+      --accent:#27ae60;
+      --bg:#f7f9fa;
+      --modal-bg:rgba(0,0,0,0.35);
+      --shadow:0 2px 16px #0002;
+      --radius:14px;
+    }
+    body{
+      font-family:Inter,system-ui,sans-serif;
+      margin:0;
+      background:var(--bg);
+      color:#222;
+      font-size:17px;
+      letter-spacing:0.01em;
+    }
+    header{
+      background:linear-gradient(90deg,var(--brand) 80%,var(--accent) 100%);
+      color:#fff;
+      padding:14px 18px 10px 18px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      box-shadow:0 2px 8px #0001;
+      position:sticky;
+      top:0;
+      z-index:1100;
+    }
+    header h1{
+      font-size:20px;
+      margin:0;
+      font-weight:700;
+      letter-spacing:0.02em;
+      text-shadow:0 1px 2px #0003;
+    }
+    #map{
+      height:calc(100vh - 128px);
+      width:100vw;
+      border-radius:0 0 var(--radius) var(--radius);
+      box-shadow:0 2px 12px #0001;
+      margin-bottom:0;
+      background:#eaeaea;
+    }
+    .topbar{
+      position:sticky;
+      top:56px;
+      left:0;
+      width:100vw;
+      z-index:1001;
+      display:flex;
+      gap:8px;
+      padding:10px 10px 8px 10px;
+      background:rgba(255,255,255,0.98);
+      box-shadow:0 2px 8px #0001;
+      border-radius:0 0 var(--radius) var(--radius);
+      align-items:center;
+    }
+    .topbar input[type=text]{
+      flex:1;
+      padding:11px 12px;
+      font-size:16px;
+      border-radius:8px;
+      border:1.5px solid #d0d6db;
+      background:#f8fafb;
+      transition:border .2s;
+      outline:none;
+    }
+    .topbar input[type=text]:focus{
+      border-color:var(--accent);
+      background:#fff;
+    }
+    .topbar button{
+      padding:10px 13px;
+      border-radius:8px;
+      border:0;
+      background:var(--accent);
+      color:#fff;
+      font-size:20px;
+      cursor:pointer;
+      box-shadow:0 1px 4px #0001;
+      transition:background .2s;
+    }
+    .topbar button:active{
+      background:#219150;
+    }
+    .fab{
+      position:fixed;
+      bottom:80px;
+      right:18px;
+      background:linear-gradient(135deg,var(--accent) 80%,#1abc9c 100%);
+      color:#fff;
+      border-radius:50%;
+      width:62px;
+      height:62px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:32px;
+      box-shadow:0 4px 16px #0003;
+      z-index:1001;
+      border:none;
+      transition:box-shadow .2s,background .2s;
+    }
+    .fab:active{box-shadow:0 2px 8px #0002;background:#219150;}
+    .bottomnav{
+      position:fixed;
+      bottom:0;
+      left:0;
+      width:100vw;
+      height:62px;
+      background:#fff;
+      border-top:1.5px solid #e0e4e8;
+      display:flex;
+      justify-content:space-around;
+      align-items:center;
+      z-index:1002;
+      box-shadow:0 -2px 12px #0001;
+      border-radius:var(--radius) var(--radius) 0 0;
+    }
+    .bottomnav button{
+      background:none;
+      border:none;
+      font-size:25px;
+      color:var(--brand);
+      transition:color .2s;
+      border-radius:8px;
+      padding:7px 14px;
+    }
+    .bottomnav button:active{color:var(--accent);}
+    .modal{
+      position:fixed;
+      top:0;left:0;width:100vw;height:100vh;
+      background:var(--modal-bg);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:2000;
+      animation:fadeIn .2s;
+    }
+    .modal.active{display:flex;}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    .modal-content{
+      background:#fff;
+      padding:22px 16px 16px 16px;
+      border-radius:var(--radius);
+      max-width:95vw;
+      width:370px;
+      box-shadow:var(--shadow);
+      animation:popIn .22s;
+      position:relative;
+    }
+    @keyframes popIn{from{transform:scale(0.95);}to{transform:scale(1);}}
+    .modal-content h2{
+      margin-top:0;
+      font-size:20px;
+      font-weight:600;
+      color:var(--brand);
+      letter-spacing:0.01em;
+      margin-bottom:10px;
+    }
+    .station-list{max-height:320px;overflow:auto;}
+    .station-item{
+      padding:13px 0 10px 0;
+      border-bottom:1.5px solid #f0f1f3;
+      font-size:16px;
+    }
+    .station-item:last-child{border-bottom:0;}
+    .station-item button{
+      margin-top:8px;
+      background:var(--accent);
+      color:#fff;
+      border:none;
+      border-radius:7px;
+      padding:7px 14px;
+      font-size:15px;
+      box-shadow:0 1px 4px #0001;
+      transition:background .2s;
+    }
+    .station-item button:active{background:#219150;}
+    .small{font-size:14px;color:#555;}
+    .modal-content input[type=text]{
+      width:100%;
+      margin-bottom:9px;
+      padding:10px 11px;
+      border-radius:7px;
+      border:1.5px solid #d0d6db;
+      background:#f8fafb;
+      font-size:15px;
+      transition:border .2s;
+      outline:none;
+    }
+    .modal-content input[type=text]:focus{border-color:var(--accent);background:#fff;}
+    .modal-content button[type=submit]{
+      width:100%;
+      background:var(--brand);
+      color:#fff;
+      border:none;
+      border-radius:7px;
+      padding:10px 0;
+      font-size:16px;
+      font-weight:600;
+      margin-top:2px;
+      box-shadow:0 1px 4px #0001;
+      transition:background .2s;
+    }
+    .modal-content button[type=submit]:active{background:var(--accent);}
+    .modal-content button:not([type=submit]){
+      width:100%;
+      margin-top:10px;
+      background:#f0f1f3;
+      color:#222;
+      border:none;
+      border-radius:7px;
+      padding:10px 0;
+      font-size:16px;
+      font-weight:500;
+      box-shadow:0 1px 4px #0001;
+      transition:background .2s;
+    }
+    .modal-content button:not([type=submit]):active{background:#e0e4e8;}
+    .modal-content .small{margin-top:7px;}
+    .dark{
+      background:#181a1b !important;
+      color:#eee !important;
+    }
+    .dark header,.dark .modal-content{
+      background:linear-gradient(90deg,#23272a 80%,#219150 100%) !important;
+      color:#eee !important;
+    }
+    .dark .topbar{
+      background:rgba(30,30,30,0.97);
+      color:#eee;
+    }
+    .dark input,.dark button{
+      background:#23272a !important;
+      color:#eee !important;
+      border-color:#444 !important;
+    }
+    .dark .bottomnav{
+      background:#23272a !important;
+      border-top:1.5px solid #333 !important;
+    }
+    .dark .small{color:#bbb !important;}
+    .dark .modal-content button:not([type=submit]){
+      background:#23272a !important;
+      color:#eee !important;
+    }
+    .dark .modal-content button:not([type=submit]):active{
+      background:#181a1b !important;
+    }
+    @media (max-width:600px){
+      header h1{font-size:17px;}
+      .modal-content{width:98vw;}
+      .topbar{padding:8px 4px 6px 4px;}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🚍 Addis Bus Navigator</h1>
+    <button id="darkModeBtn" title="Toggle dark mode" style="background:none;border:none;font-size:22px;color:#fff;">🌙</button>
+  </header>
+  <div class="topbar">
+    <input id="searchBox" type="text" placeholder="Search destination..." list="destinationsList" autocomplete="off"/>
+    <datalist id="destinationsList"></datalist>
+    <button id="searchBtn" title="Search"><span>🔍</span></button>
+    <button id="locateBtn" title="My Location"><span>📍</span></button>
+  </div>
+  <div id="map"></div>
+  <button class="fab" id="nearestBtn" title="Nearest Station">⭐</button>
+  <nav class="bottomnav">
+    <button id="navStations" title="Stations">🚌</button>
+    <button id="navSuggest" title="Suggest">➕</button>
+    <button id="navFeedback" title="Feedback">💬</button>
+  </nav>
+  <!-- Modals -->
+  <div class="modal" id="stationsModal">
+    <div class="modal-content">
+      <h2>Stations</h2>
+      <div id="stationsList" class="station-list small"></div>
+      <button onclick="closeModal('stationsModal')" style="width:100%;margin-top:10px;">Close</button>
+    </div>
+  </div>
+  <div class="modal" id="suggestModal">
+    <div class="modal-content">
+      <h2>Suggest Station</h2>
+      <form id="suggestForm">
+        <input type="text" id="suggestName" placeholder="Station name" required style="width:100%;margin-bottom:7px;"/>
+        <input type="text" id="suggestLat" placeholder="Latitude" required style="width:100%;margin-bottom:7px;"/>
+        <input type="text" id="suggestLng" placeholder="Longitude" required style="width:100%;margin-bottom:7px;"/>
+        <input type="text" id="suggestRoutes" placeholder="Routes (comma separated)" required style="width:100%;margin-bottom:7px;"/>
+        <button type="submit" style="width:100%;">Submit</button>
+      </form>
+      <div id="suggestMsg" class="small"></div>
+      <button onclick="closeModal('suggestModal')" style="width:100%;margin-top:10px;">Close</button>
+    </div>
+  </div>
+  <div class="modal" id="feedbackModal">
+    <div class="modal-content">
+      <h2>Feedback</h2>
+      <form id="feedbackForm">
+        <input type="text" id="feedbackText" placeholder="Your feedback..." style="width:100%;margin-bottom:7px;" />
+        <button type="submit" style="width:100%;">Send</button>
+      </form>
+      <div id="feedbackMsg" class="small"></div>
+      <button onclick="closeModal('feedbackModal')" style="width:100%;margin-top:10px;">Close</button>
+    </div>
+  </div>
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    // Map Initialization
+    let map, lightLayer, darkLayer;
+    lightLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+      subdomains: 'abcd', maxZoom: 19
+    });
+    darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+      subdomains: 'abcd', maxZoom: 19
+    });
+    map = L.map('map', { zoomControl: false, layers: [lightLayer] }).setView([9.03, 38.74], 13);
+
+    // Marker layer group
+    const stationsLayer = L.layerGroup().addTo(map);
+    const routesLayer = L.layerGroup().addTo(map);
+    let stationsData = [];
+
+    // Bus and user location icons
+    const busIcon = L.icon({
+      iconUrl: 'https://cdn.jsdelivr.net/npm/@tabler/icons@2.47.0/icons/bus.svg', // Modern SVG bus icon
+      iconSize: [32,32], iconAnchor: [16,32], popupAnchor: [0,-32]
+    });
+    const userIcon = L.icon({
+      iconUrl: 'https://cdn-icons-png.flaticon.com/512/149/149071.png',
+      iconSize: [28,28], iconAnchor: [14,28], popupAnchor: [0,-28]
+    });
+
+    // Utility: distance between two points (meters) using Haversine
+    function distanceMeters(lat1, lon1, lat2, lon2) {
+      function toRad(d){return d * Math.PI / 180}
+      const R = 6371000;
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(toRad(lat1))*Math.cos(toRad(lat2)) * Math.sin(dLon/2)*Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+
+    // Try to fetch stations.json; if it fails, use fallback sample data
+    fetch('stations.json').then(r => r.json()).then(data => {
+      stationsData = data;
+      renderStations();
+    }).catch(err => {
+      stationsData = [
+        {
+          name: "Megenagna Bus Station",
+          lat: 9.0184, lng: 38.8123,
+          routes: ["Bole (10 birr)", "Piazza (8 birr)", "Mexico Square (12 birr)"],
+          description: "Major hub in the east of Addis.",
+          photoUrl: "https://upload.wikimedia.org/wikipedia/commons/6/6e/Megenagna_bus_station.jpg",
+          amenities: ["Shops", "Toilets"],
+          routePath: [
+            [9.0184, 38.8123], [9.022, 38.79], [9.0371, 38.7625]
+          ]
+        },
+        {
+          name: "Merkato Bus Station",
+          lat: 9.0372, lng: 38.7393,
+          routes: ["Piazza (6 birr)", "Megenagna (10 birr)"],
+          description: "Busy station near the largest market.",
+          photoUrl: "",
+          amenities: ["Shops"],
+          routePath: [
+            [9.0372, 38.7393], [9.0371, 38.7625]
+          ]
+        },
+        {
+          name: "Piazza Bus Station",
+          lat: 9.0371, lng: 38.7625,
+          routes: ["Bole (12 birr)", "Megenagna (8 birr)"],
+          description: "Central station in the heart of Addis.",
+          photoUrl: "",
+          amenities: ["Toilets"],
+          routePath: [
+            [9.0371, 38.7625], [9.0184, 38.8123]
+          ]
+        }
+      ];
+      renderStations();
+    });
+
+    // Update destination autocomplete options based on station data
+    function updateAutocomplete() {
+      const destSet = new Set();
+      stationsData.forEach(s => s.routes.forEach(r => destSet.add(r.split('(')[0].trim())));
+      const datalist = document.getElementById('destinationsList');
+      datalist.innerHTML = '';
+      destSet.forEach(dest => {
+        const opt = document.createElement('option');
+        opt.value = dest;
+        datalist.appendChild(opt);
+      });
+    }
+
+    // Render stations and route paths
+    function renderStations(){
+      stationsLayer.clearLayers();
+      routesLayer.clearLayers();
+      const list = document.getElementById('stationsList');
+      list.innerHTML = '';
+      stationsData.forEach(station => {
+        // Marker
+        const marker = L.marker([station.lat, station.lng], {icon: busIcon}).addTo(stationsLayer);
+        const popupHtml = `
+          <b>${station.name}</b><br>
+          ${station.photoUrl ? `<img src="${station.photoUrl}" style="width:100px"><br>` : ''}
+          ${station.description ? `<i>${station.description}</i><br>` : ''}
+          ${station.amenities ? `<span class="small">Amenities: ${station.amenities.join(', ')}</span><br>` : ''}
+          Routes:<br>${station.routes.join('<br>')}
+          <br>
+          <a target='_blank' href='https://www.google.com/maps/dir/?api=1&destination=${station.lat},${station.lng}'>Navigate</a>
+          ${lastUserPos ? `<br><a target='_blank' href='https://www.google.com/maps/dir/?api=1&origin=${lastUserPos.lat},${lastUserPos.lng}&destination=${station.lat},${station.lng}'>Directions from here</a>` : ''}
+        `;
+        marker.bindPopup(popupHtml);
+
+        // List
+        const item = document.createElement('div');
+        item.className = 'station-item';
+        item.innerHTML = `<strong>${station.name}</strong><br>
+          <span class='small'>${station.routes.join(', ')}</span><br>
+          <button data-lat='${station.lat}' data-lng='${station.lng}' class='goBtn'>Show on map</button>`;
+        list.appendChild(item);
+
+        // Draw route path if available
+        if (station.routePath && Array.isArray(station.routePath)) {
+          L.polyline(station.routePath, {color: '#27ae60', weight: 4, opacity: 0.7}).addTo(routesLayer);
+        }
+      });
+
+      // attach go buttons
+      document.querySelectorAll('.goBtn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const lat = parseFloat(e.target.dataset.lat);
+          const lng = parseFloat(e.target.dataset.lng);
+          map.setView([lat,lng], 16);
+          closeModal('stationsModal');
+        });
+      });
+
+      updateAutocomplete();
+    }
+
+    // Geolocation (user location)
+    let userMarker = null; let userCircle = null; let lastUserPos = null;
+    function locateUser(center=true){
+      if (!navigator.geolocation) { alert('Geolocation not supported'); return; }
+      navigator.geolocation.getCurrentPosition(pos => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        lastUserPos = {lat, lng};
+        if (userMarker) {
+          userMarker.setLatLng([lat, lng]);
+        } else {
+          userMarker = L.marker([lat, lng], {icon: userIcon, title:'You are here'}).addTo(map);
+        }
+        if (userCircle) {
+          userCircle.setLatLng([lat, lng]);
+          userCircle.setRadius(pos.coords.accuracy);
+        } else {
+          userCircle = L.circle([lat, lng], {
+            radius: pos.coords.accuracy,
+            color:'#1380ff',
+            fillColor:'#1380ff',
+            fillOpacity:0.15
+          }).addTo(map);
+        }
+        if (center) {
+          // Use a higher zoom for better accuracy and open a popup
+          map.setView([lat, lng], 17);
+          userMarker.bindPopup("You are here").openPopup();
+        }
+        renderStations();
+      }, err => {
+        let msg = 'Could not get your location.\n\n';
+        if (err.code === 1) {
+          msg += 'Permission denied.\n\n';
+          msg += 'To enable location:\n';
+          msg += '- Tap the lock icon in your browser’s address bar.\n';
+          msg += '- Allow location access for this site.\n';
+          msg += '- Then reload the page.';
+          if (location.protocol !== 'https:') {
+            msg += '\n\nNote: Some browsers require HTTPS for location to work.';
+          }
+        } else if (err.code === 2) {
+          msg += 'Position unavailable. Try again or check your device settings.';
+        } else if (err.code === 3) {
+          msg += 'Timeout. Try again in an area with better GPS signal.';
+        } else {
+          msg += 'Try on a mobile device and allow location access.';
+        }
+        alert(msg);
+      }, { enableHighAccuracy:true, timeout:15000, maximumAge:0 });
+    }
+
+    // Button hooks
+    document.getElementById('locateBtn').addEventListener('click', ()=> locateUser(true));
+    document.getElementById('searchBtn').addEventListener('click', ()=> searchDestination());
+    document.getElementById('nearestBtn').addEventListener('click', ()=> findNearestStation());
+
+    // Search: find station whose routes include the search string
+    function searchDestination(){
+      const q = document.getElementById('searchBox').value.trim().toLowerCase();
+      if (!q) { alert('Please type a destination like "Bole" or "Piazza"'); return; }
+      let found=false;
+      stationsData.forEach(s => {
+        for (const route of s.routes){
+          if (route.toLowerCase().includes(q)){
+            map.setView([s.lat,s.lng],15);
+            L.popup().setLatLng([s.lat,s.lng]).setContent(`<b>${s.name}</b><br>${s.routes.join('<br>')}`).openOn(map);
+            found=true; break;
+          }
+        }
+      });
+      if (!found) alert('No stations found for that destination (try another name or check spelling).');
+    }
+
+    // Find the nearest station to lastUserPos
+    function findNearestStation(){
+      if (!lastUserPos){ locateUser(true); return; }
+      let minDist=Infinity, nearest=null;
+      stationsData.forEach(s=>{
+        const d = distanceMeters(lastUserPos.lat,lastUserPos.lng, s.lat, s.lng);
+        if (d < minDist){ minDist=d; nearest=s; }
+      });
+      if (nearest){
+        map.setView([nearest.lat,nearest.lng],16);
+        L.popup().setLatLng([nearest.lat,nearest.lng]).setContent(
+          `<b>${nearest.name}</b><br>${nearest.routes.join('<br>')}<br>Distance: ${Math.round(minDist)} m`
+        ).openOn(map);
+      }
+      else alert('No station data available yet.');
+    }
+
+    // Dark mode toggle
+    let darkMode = false;
+    document.getElementById('darkModeBtn').addEventListener('click', () => {
+      darkMode = !darkMode;
+      document.body.classList.toggle('dark', darkMode);
+      if (darkMode) {
+        map.removeLayer(lightLayer); map.addLayer(darkLayer);
+      } else {
+        map.removeLayer(darkLayer); map.addLayer(lightLayer);
+      }
+    });
+
+    // Modal helpers
+    function openModal(id){ document.getElementById(id).classList.add('active'); }
+    function closeModal(id){ document.getElementById(id).classList.remove('active'); }
+
+    // Bottom nav
+    document.getElementById('navStations').onclick = ()=>openModal('stationsModal');
+    document.getElementById('navSuggest').onclick = ()=>openModal('suggestModal');
+    document.getElementById('navFeedback').onclick = ()=>openModal('feedbackModal');
+
+    // Feedback form
+    document.getElementById('feedbackForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      const msg = document.getElementById('feedbackText').value.trim();
+      if (!msg) return;
+      document.getElementById('feedbackMsg').textContent = "Thank you for your feedback!";
+      this.reset();
+    });
+
+    // Crowdsourcing: Suggest new station
+    document.getElementById('suggestForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      const name = document.getElementById('suggestName').value.trim();
+      const lat = parseFloat(document.getElementById('suggestLat').value);
+      const lng = parseFloat(document.getElementById('suggestLng').value);
+      const routes = document.getElementById('suggestRoutes').value.split(',').map(r=>r.trim()).filter(Boolean);
+      if (!name || isNaN(lat) || isNaN(lng) || routes.length === 0) {
+        document.getElementById('suggestMsg').textContent = "Please fill all fields correctly.";
+        return;
+      }
+      document.getElementById('suggestMsg').textContent = "Thank you for your suggestion!";
+      this.reset();
+    });
+
+    // Initial locate on load (center map)
+    locateUser(true);
+
+    // PWA: Register service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').then(() => {});
+    }
+  </script>
+</body>
+</html>

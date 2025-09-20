@@ -1,0 +1,26 @@
+[
+  {
+    "name": "Megenagna Bus Station",
+    "lat": 9.0184,
+    "lng": 38.8123,
+    "routes": ["Bole (10 birr)", "Piazza (8 birr)", "Mexico Square (12 birr)"]
+  },
+  {
+    "name": "Merkato Bus Station",
+    "lat": 9.0372,
+    "lng": 38.7393,
+    "routes": ["Piazza (6 birr)", "Megenagna (10 birr)"]
+  },
+  {
+    "name": "Piazza Bus Station",
+    "lat": 9.0371,
+    "lng": 38.7625,
+    "routes": ["Bole (12 birr)", "Megenagna (8 birr)"]
+  },
+  {
+    "name":"Semit Bus Station",
+    "lat":9.0074309,
+    "lng":38.7615696,
+    "routes":["Bole (15 birr)", "Piazza (10 birr)"] 
+  }
+]
